@@ -1,0 +1,11 @@
+name: ddpw
+channels:
+  - conda-forge
+  - pytorch
+  - defaults
+dependencies:
+  - pytorch=1.10.1
+  - submitit
+  - numpy
+  - python=3.8
+prefix: ~/.conda/envs/ddpw

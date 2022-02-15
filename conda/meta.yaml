@@ -1,0 +1,34 @@
+{% set data = load_setup_py_data(setup_file='../setup.py', from_recipe_dir=True) %}
+
+package:
+  name: ddpw
+  version: {{ data.get('version') }}
+
+source:
+  path: ../
+
+build:
+  number: {{ data.get('build') }}
+  script: python setup.py install --single-version-externally-managed --record=record.txt
+
+requirements:
+  build:
+    - python 3.8
+    - numpy >=1.21
+    - setuptools
+    - git
+  run:
+    - pytorch >=1.10
+    - submitit >=1.2
+
+about:
+  home: http://ddpw.projects-tvs.surge.sh
+  summary:  A utility package to encapsulate the scaffolding for PyTorch's
+            Distributed Data Parallel
+  description: The Distributed Data Parallel wrapper (DDPW) is created as a
+            utility package to encapsulate the scaffolding for PyTorch's
+            Distributed Data Parallel.
+  license: BSD 3-Clause
+  dev_url: https://github.com/sujaltv/ddpw
+  doc_url: http://ddpw.projects-tvs.surge.sh
+  doc_source_url: https://github.com/sujaltv/ddpw/tree/master/docs

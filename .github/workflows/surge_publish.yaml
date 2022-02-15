@@ -1,0 +1,33 @@
+name: Publish documentation to Surge
+
+on:
+  workflow_dispatch:
+    branches:
+      - dev
+  # push:
+  #   branches:
+  #     - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Surge Publish
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+      - name: Instal and build
+        run: |
+          cd docs
+          pip install -r requirements.txt
+          make html
+      - name: Deploy to surge
+        uses: dswistowski/surge-sh-action@v1.0.0
+        with:
+          domain: ${{ secrets.surge_domain }}
+          project: 'docs/build/html'
+          login: ${{ secrets.surge_login }}
+          token: ${{ secrets.surge_token }}

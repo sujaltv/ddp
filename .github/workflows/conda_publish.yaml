@@ -1,0 +1,22 @@
+name: Publish to Anaconda
+
+on:
+  workflow_dispatch:
+    branches:
+      - dev
+  # push:
+  #   branches:
+  #     - master
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    name: Conda Publish
+    steps:
+    - uses: actions/checkout@v2
+    - name: Publish to Anaconda
+      uses: fcakyon/conda-publish-action@v1.3
+      with:
+        subdir: 'conda'
+        anacondatoken: ${{ secrets.ANACONDA_TOKEN }}
+        platforms: 'win osx linux'
