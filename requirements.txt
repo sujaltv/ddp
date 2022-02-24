@@ -1,6 +1,14 @@
-numpy==1.22.2
-pip==22.0.3
-setuptools==60.7.1
+brotlipy==0.7.0
+colorama==0.4.4
+fluiddyn==0.5.0
+furo==2022.1.2
+future==0.18.2
+pip==22.3.1
+pyOpenSSL==22.0.0
+PySocks==1.7.1
+sphinx-copybutton==0.5.0
+sphinxcontrib-bibtex==2.4.1
 submitit==1.2.1
+toolz==0.12.0
 torch==1.10.1
 wheel==0.37.1

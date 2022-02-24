@@ -1,17 +1,27 @@
 import abc
-from typing import final
+from typing import final, Optional, Callable
 from dataclasses import dataclass
 
 from torch import nn, optim
 from torch.utils import data
-from torch.nn.modules.loss import _Loss as Loss
+
+from .utils import Utils
 
 
 class OptimiserLoader(object):
-  r"""This class contains the optimiser with required configurations."""
+  r"""
+  This class allows usage of optimisers with desired configurations. Before it
+  begins the training/evaluation process, it uses the optimiser specified in
+  this class.
+
+  Of course, this class could be extended to customise as desired: to use
+  different optimiser-specific parameters such as the learning rate, weight
+  decay, momentum, `etc.`, as well as defining a set of optimisers to choose
+  from depending on the desired optimiser at run-time.
+  """
 
   @abc.abstractmethod
-  def __call__(self, model: nn.Module) -> optim.Optimizer:
+  def __call__(self, model: Optional[nn.Module]) -> optim.Optimizer:
     r"""
     .. admonition:: Definition required
       :class: important
@@ -19,11 +29,12 @@ class OptimiserLoader(object):
       This method needs to be explicitly defined by the user.
 
     This method receives the model whose parameters are to be loaded into the
-    optimiser.
+    optimiser. Once configured as desired, it returns the optimiser.
 
-    :param nn.Module model: The model whose parameters are to be loaded into the
-      optimiser.
-    :returns optim.Optimizer: The desired optimiser with model parameters loaded
+    :param Optional[nn.Module] model: The model whose parameters are to be
+      loaded into the optimiser.
+    :returns optim.Optimizer: The desired optimiser with configurations set and
+        model parameters loaded
     :raises NotImplementedError: Method not implemented.
     """
 
@@ -35,23 +46,24 @@ class OptimiserLoader(object):
 class ArtefactsConfig(object):
   r"""Configurations relating to the dataset and the model."""
 
-  dataset_root: str = '/data/dataset'
-  r"""Location of the dataset to be used to training or evaluation."""
-
-  train_set: data.DataLoader = None
+  train_set: data.Dataset = None
   r"""The dataset to use for training. Default: ``None``."""
 
-  test_set: data.DataLoader = None
+  test_set: data.Dataset = None
   r"""The dataset to use for evaluation. Default: ``None``."""
 
-  validation_set: data.DataLoader = None
+  validation_set: data.Dataset = None
   r"""The dataset to use for validation. Default: ``None``."""
 
-  validation_percentage: float = 20
+  collate_fn: Optional[Callable] = None
+  r"""Any callable function to be passed down to the dataloader. Default:
+   ``None``."""
+
+  validation_percentage: float = 0
   r"""The percentage of training dataset to be used for validation. If this
   property has a value of ``0``, it is assumed that no validation is required.
   This property is ignored for evaluation. Range: ``0`` to ``50``, inclusive.
-  Default: ``20``. Range enforced by the :py:attr:`.needs_validation`
+  Default: ``0``. Range enforced by the :py:attr:`.needs_validation`
   property."""
 
   batch_size: int = 64
@@ -64,9 +76,6 @@ class ArtefactsConfig(object):
   r"""Specifies if the model to be trained has batch normalisation in it.
   Default: ``False``."""
 
-  loss_fn: Loss = None
-  r"""An instance of the :class:`Loss` module. Default: ``None``."""
-
   optimiser_config: OptimiserLoader = None
   r"""Optimiser setup to be passed by the user. Default: ``None``."""
 
@@ -77,11 +86,11 @@ class ArtefactsConfig(object):
 
    This property need not be specified by the user and will be automatically
    updated by the wrapper right before training. This can be directly in the
-   :py:meth:`.Trainer.train` method.
+   :py:meth:`.Job.train` method.
 
   The wrapper loads model parameters into the optimiser with the specified
   configs in :py:attr:`optimiser_config` and updates this parameter. This could
-  be accessed in :py:meth:`.Trainer.train` or :py:meth:`.Trainer.evaluate`.
+  be accessed in :py:meth:`.Job.train` or :py:meth:`.Job.evaluate`.
   Default: ``None``.
   """
 
@@ -94,3 +103,18 @@ class ArtefactsConfig(object):
     """
 
     return 0 < self.validation_percentage <= 50
+
+  def print(self):
+    r"""
+    This method prints this object in a readable format.
+    """
+
+    Utils.print('Artefacts details:')
+    Utils.print(' • Train dataset:                       ' +
+                f'{len(self.train_set) if self.train_set is not None else 0}')
+    Utils.print(' • Test dataset:                        ' +
+                f'{len(self.test_set) if self.test_set is not None else 0}')
+    if self.needs_validation:
+      Utils.print(' • Validation percentage:               ' +
+                  f'{self.validation_percentage}')
+    Utils.print(f' • Batch size:                          {self.batch_size}')

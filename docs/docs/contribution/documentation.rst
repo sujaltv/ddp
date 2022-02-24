@@ -7,24 +7,14 @@ Set up
 .. code-block:: bash
 
   # with conda
-  conda env create --file environment.yaml
-  conda activate ddpw-docs
-  pip install -r requirements.txt
+  > conda env create --file environment.yaml # root folder
+  > conda activate ddpw
+  ? pip install -r requirements.txt
 
-Freeze environment
-^^^^^^^^^^^^^^^^^^
-
-.. code-block:: bash
-
-  sh freeze.sh
-
-  # alternatively
-  conda env export --no-build --from-history > environment.yaml
-  pip list --not-required --format=freeze > requirements.txt
-
-Update environment
-^^^^^^^^^^^^^^^^^^
+Making documentation
+====================
 
 .. code-block:: bash
 
-  conda env update --file environment.yaml
+  > cd docs
+  > make html

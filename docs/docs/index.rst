@@ -1,26 +1,30 @@
 DDPW
 ####
 
-The **Distributed Data Parallel wrapper** is a minimal PyTorch-based wrapper
-written in Python 3.8 that makes it easy to run deep learning models on multiple
-nodes and GPUs as well as on a single CPU.
+**Distributed Data Parallel Wrapper (DDPW)** is a minimal PyTorch-based wrapper
+that makes it easy to run deep learning models on various compute platforms.
+DDPW handles scaffolding tasks like creating threads on GPUs/nodes, moving the
+models and optimisers to devices, setting up inter-process communication, `etc.`
+and allows the user to focus on the main aspects of modelling and training.
 
-This is a "DDP" wrapper; it supports data parallelism across GPUs, not model
-parallelism. To learn more about DDP, refer to PyTorch documentation on DDP or
-`this nice Medium article
-<https://medium.com/mlearning-ai/distributed-data-parallel-with-slurm-submitit-pytorch-168c1004b2ca>`_.
+DDPW includes support for training on CPUs, GPUs (CUDA and Apple M1 SoC) and in
+the SLURM environment.
 
 Features
 ========
 
-1. **Multiple platforms**. This wrapper allows models to be trained on:
+1. **Multiple platforms**. This wrapper allows models to be trained different compute platforms:
 
-   a. a single CPU,
-   b. a single GPU,
-   c. multiple cluster-less GPUs, and
-   d. SLURM-based multi-node (clustered) single/multiple GPUs (by using `Submitit <https://github.com/facebookincubator/submitit>`_)
+   a. CPU,
+   b. one or more GPUs (CUDA and Apple M1 SoC), and
+   c. SLURM (by using `Submitit <https://github.com/facebookincubator/submitit>`_)
 
-2. **Flexible training and evaluation**. This wrapper allows easy training, pausing, resuming, and evaluation
+2. **Flexible training and evaluation**. This wrapper allows easy training,
+   pausing, resuming, and evaluating of models
+
+3. **Non-training tasks**. Tasks that are not essentially of the model-based or
+   training-based paradigms but those that simply need to be run across devices
+   can also be executed.
 
 .. toctree::
    :caption: Introduction
@@ -38,7 +42,7 @@ Features
    :titlesonly:
 
    api/wrapper
-   api/trainer
+   api/job
    api/optimiser
    api/types
    api/utils

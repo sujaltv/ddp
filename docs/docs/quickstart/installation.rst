@@ -2,7 +2,7 @@ Installation
 ############
 
 .. warning::
-  This wrapper is tested only on Linux arch-64.
+  This wrapper is released for all architectures but is tested only on Linux arch-64 and Apple M1 SoC.
 
 With ``conda``
 ==============

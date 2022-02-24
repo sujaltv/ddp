@@ -1,3 +1,5 @@
+from typing import Optional, Callable
+
 from torch.utils import data
 from torch.utils.data import DistributedSampler, DataLoader, random_split
 
@@ -7,36 +9,43 @@ from ..platform import Platform, PlatformConfig
 
 
 def sampler(dataset: data.Dataset, world_size: int, global_rank: int,
-            batch_size: int, is_cpu: bool = False):
+            batch_size: int, collate_fn: Optional[Callable] = None,
+            is_cpu: bool = False):
   r"""
-  This function creates a sampler for the given process (i.e., rank) if
-  necessary (i.e., if not CPU) and creates a dataloder from the sampler.
+  This function selects a portion of the original dataset shared by other
+  devices. If the device being trained on is a CPU, no sharing is necessary.
 
-  :param data.Dataset dataset: The dataset from which to sample.
-  :param int world_size: The world size.
-  :param int global_rank: Current GPU's global rank.
+  :param data.Dataset dataset: The dataset from which to sample for the current
+    device.
+  :param int world_size: World size.
+  :param int global_rank: Global rank of the current GPU.
   :param int batch_size: Batch size.
-  :param bool is_cpu: Is the dataset for CPU. Default: `False`.
+  :param Optional[Callable] collate_fn: The collate function to use in the
+    dataloader.
+  :param bool is_cpu: Specifies if the device is a CPU or Apple M1. Default:
+    `False`.
 
-  :returns data.Dataset: The dataset for the current process.
+  :returns data.Dataset: A dataloader with portion of the dataset selected for
+      the current process.
   """
 
   smplr = None if is_cpu else DistributedSampler(dataset, world_size,
                                                  rank=global_rank)
-  result = DataLoader(dataset, batch_size, sampler=smplr, pin_memory=True)
-
-  return result
+  return DataLoader(dataset, batch_size, sampler=smplr, pin_memory=True,
+                    collate_fn=collate_fn)
 
 
 def dataset_setup(global_rank: int, p_config: PlatformConfig,
-                  artefacts: ArtefactsConfig):
+                  a_config: ArtefactsConfig):
   r"""
-  This function selects a portion of the dataset for the current GPU (i.e., the
-  rank) and splits it into train and validation in case training.
+  This function selects a portion of the training dataset for validation if
+  specified. In case of training/testing on multiple devices, it then allocates
+  a portion each of the training, test, and validation datasets (if available)
+  to the current device and returns a dataloader for each.
 
   :param int global_rank: Global rank of the current GPU.
   :param PlatformConfig p_config: Platform configurations.
-  :param ArtefactsConfig artefacts: Job configurations.
+  :param ArtefactsConfig a_config: Job configurations.
 
   :returns tuple: A triplet of dataloaders for the training, validation, and
       test datasets respectively.
@@ -46,28 +55,30 @@ def dataset_setup(global_rank: int, p_config: PlatformConfig,
   val_loader = None
   test_loader = None
 
-  is_cpu = p_config.platform == Platform.CPU
-  batch_size = artefacts.batch_size
+  val_set = a_config.validation_set
 
-  args = (p_config.world_size, global_rank, batch_size, is_cpu)
+  is_cpu = p_config.platform in [Platform.CPU, Platform.MPS]
+  batch_size, collate_fn = a_config.batch_size, a_config.collate_fn
+
+  args = (p_config.world_size, global_rank, batch_size, collate_fn, is_cpu)
 
   # if the training dataset is provided
-  if (train_set := artefacts.train_set) is not None:
+  if (train_set := a_config.train_set) is not None:
 
     # if requested to set aside a portion of the training set for validation
-    if artefacts.needs_validation:
+    if a_config.needs_validation:
       dataset_size = len(train_set)
-      v_size = (dataset_size * artefacts.validation_percentage) // 100
+      v_size = (dataset_size * a_config.validation_percentage) // 100
       t_size = dataset_size - v_size
-      Utils.print(
-        f'\tTrain size = {t_size}; validation size = {v_size}.')
+      Utils.print(f'\tTrain size = {t_size}; validation size = {v_size}.')
       [train_set, val_set] = random_split(train_set, [t_size, v_size])
+    if val_set is not None:
       val_loader = sampler(val_set, *args)
 
     train_loader = sampler(train_set, *args)
 
   # if the test dataset is provided
-  if (test_set := artefacts.test_set) is not None:
+  if (test_set := a_config.test_set) is not None:
     Utils.print(f'\tTest size  {len(test_set)}.')
     test_loader = sampler(test_set, *args)
 

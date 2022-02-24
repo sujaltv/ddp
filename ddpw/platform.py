@@ -3,6 +3,7 @@ from typing import final
 from dataclasses import dataclass
 
 import torch.distributed as dist
+from .utils import Utils
 
 
 @final
@@ -18,6 +19,8 @@ class Platform(Enum):
   SLURM = 2
   r"""The platform to run on is a SLURM-based cluster of GPU nodes."""
 
+  MPS = 3
+  r"""The platform to run on is Mac's Apple M1 SoCs."""
 
 @final
 @dataclass
@@ -58,7 +61,7 @@ class PlatformConfig(object):
   master_port: str = '1889'
   r"""The port at which IPC happens. Default: ``1889``."""
 
-  backend: dist.Backend = dist.Backend.GLOO
+  backend = dist.Backend.GLOO if hasattr(dist, 'Backend') else None
   r"""The PyTorch-supported backend to used for distributed data parallel.
   Default: ``torch.distributed.Backend.GLOO``."""
 
@@ -84,6 +87,28 @@ class PlatformConfig(object):
   @property
   def requires_ipc(self):
     r"""Needs communication. This property tells whether the setup requires IPC.
-    IPC is not required for a single CPU or a single GPU."""
+    IPC is not required for a single CPU, a single GPU, or Apple M1."""
 
-    return self.platform != Platform.CPU and self.world_size > 1
+    return self.platform not in [Platform.CPU, Platform.MPS] \
+      and self.world_size > 1
+
+  def print(self):
+    r"""
+    This method prints this object in a readable format.
+    """
+
+    Utils.print('Platform details:')
+    Utils.print(f' • Name:                                {self.name}')
+    Utils.print(f' • Spawn method:                        {self.spawn_method}')
+    Utils.print(f' • SLURM partition (if applicable):     {self.partition}')
+    Utils.print(f' • Platform:                            {self.platform}')
+    Utils.print(f' • Nodes:                               {self.n_nodes}')
+    Utils.print(f' • GPUs:                                {self.n_gpus}')
+    Utils.print(f' • CPUs per task:                       {self.cpus_per_task}')
+    Utils.print(f' • SLURM timeout (if applicable):       {self.timeout_min}')
+    Utils.print(f' • Seed (for random number generators): {self.seed}')
+    Utils.print(f' • PyTorch backend:                     {self.backend}')
+    if self.requires_ipc:
+      Utils.print(f' • Master IP address:                   {self.master_addr}')
+      Utils.print(f' • Master port:                         {self.master_port}')
+    Utils.print(f' • World size:                          {self.world_size}')

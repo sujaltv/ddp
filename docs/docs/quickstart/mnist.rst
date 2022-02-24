@@ -13,7 +13,7 @@ Example with MNIST
   from torchvision.datasets.mnist import MNIST
 
 
-  class CustomDataset(MNIST):
+  class MyDataset(MNIST):
     def __init__(self, root: str, train: bool = True, download: bool = False):
       transforms = T.Compose([
         T.ToTensor(),
@@ -21,7 +21,7 @@ Example with MNIST
         T.Normalize((0.1307,), (0.3081,))
       ])
 
-      super(CustomDataset, self).__init__(root, train, transforms,
+      super(MyDataset, self).__init__(root, train, transforms,
                                           download=download).__init__()
 
 
@@ -36,9 +36,9 @@ Example with MNIST
   from torch.nn import functional as F
 
 
-  class CustomModel(torch.nn.Module):
+  class MyModel(torch.nn.Module):
     def __init__(self):
-      super(CustomModel, self).__init__()
+      super(MyModel, self).__init__()
 
       self.conv1 = torch.nn.Conv2d(1, 32, (3,3))
       self.conv2 = torch.nn.Conv2d(32, 64, (3,3))
@@ -68,20 +68,7 @@ Example with MNIST
       return F.log_softmax(x, 1)
 
 
-3. Custom loss
-==============
-
-.. code-block:: python
-
-  # src/loss.py
-
-  from torch.nn import NLLLoss
-
-  class CustomLoss(NLLLoss):
-    pass
-
-
-4. Custom optimiser
+3. Custom optimiser
 ===================
 .. _MNIST custom optimiser:
 
@@ -93,7 +80,7 @@ Example with MNIST
   from ddpw.artefacts import OptimiserLoader
 
 
-  class CustomOptimiser(OptimiserLoader):
+  class MyOptimiser(OptimiserLoader):
     def __init__(self, lr=0.1):
       self.lr = lr
 
@@ -101,9 +88,9 @@ Example with MNIST
       return torch.optim.Adadelta(params=model.parameters(), lr=self.lr)
 
 
-5. Custom trainer
+4. Custom job
 =================
-.. _MNIST custom trainer:
+.. _MNIST custom job:
 
 .. code-block:: python
 
@@ -112,42 +99,43 @@ Example with MNIST
   import torch
   from torch.utils import data
   import torch.distributed as dist
+  import torch.nn.functional as F
 
   from ddpw.utils import Utils
   from ddpw.platform import Platform
-  from ddpw.trainer import Trainer, TrainingConfig
+  from ddpw.job import Job, JobConfig
 
 
-  class CustomTrainer(Trainer):
-    def __init__(self, t_config: TrainingConfig):
-      super(CustomTrainer, self).__init__(t_config=t_config)
+  class MyTrainer(Job):
+    def __init__(self, j_config: JobConfig):
+      super(MyTrainer, self).__init__(j_config=j_config)
 
     def train(self, global_rank: int):
-      train_set = self.artefacts.train_set
+      train_set = self.a_config.train_set
 
       # for every epoch
-      for e in range(self.t_config.start_at, self.t_config.epochs):
-        self.artefacts.model.train()
+      for e in range(self.j_config.start_at, self.j_config.epochs):
+        self.a_config.model.train()
 
         training_loss = torch.Tensor([0])
         training_accuracy = torch.Tensor([0])
 
-        model_device = next(self.artefacts.model.parameters()).device
+        model_device = next(self.a_config.model.parameters()).device
 
         # training
         for _, (datapoints, labels) in enumerate(train_set):
-          self.artefacts.optimiser.zero_grad()
+          self.a_config.optimiser.zero_grad()
 
-          preds = self.artefacts.model(datapoints.to(model_device))
-          loss = self.artefacts.loss_fn(preds, labels.to(model_device))
+          preds = self.a_config.model(datapoints.to(model_device))
+          loss = F.nll_loss(preds, labels.to(model_device))
           training_loss += loss.item()
           loss.backward()
 
           # average and synchronise the gradients at the end of each batch
           if self.p_config.requires_ipc:
-            Utils.all_average_gradients(self.artefacts.model)
+            Utils.all_average_gradients(self.a_config.model)
 
-          self.artefacts.optimiser.step()
+          self.a_config.optimiser.step()
 
         training_loss /= len(train_set)
 
@@ -164,15 +152,15 @@ Example with MNIST
 
     def evaluate(self, global_rank: int, dataset: data.DataLoader = None):
       if dataset is None:
-        dataset = self.artefacts.test_set
+        dataset = self.a_config.test_set
       assert dataset is not None
 
       accuracy = torch.Tensor([0])
-      self.artefacts.model.eval()
-      model_device = next(self.artefacts.model.parameters()).device
+      self.a_config.model.eval()
+      model_device = next(self.a_config.model.parameters()).device
       with torch.no_grad():
         for _, (datapoints, labels) in enumerate(dataset):
-          preds = self.artefacts.model(datapoints.to(model_device))
+          preds = self.a_config.model(datapoints.to(model_device))
           num_correct = (preds.argmax(1) == labels.to(model_device)).sum().item()
           [num_samples, *_] = datapoints.shape
           accuracy += (num_correct / num_samples)

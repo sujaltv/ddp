@@ -1,0 +1,36 @@
+name: Upload to AWS S3
+on:
+  workflow_dispatch:
+    branches:
+      - master
+      - dev
+jobs:
+  deploy:
+    name: Copy and deploy to AWS S3
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checking out source code
+        uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+      - name: Instal and build
+        run: |
+          pip install -r requirements.txt
+          cd docs
+          make html
+      - name: Copying build files
+        run: |
+          mkdir app
+          cp -r docs/build/html/** ./app
+      - name: Publish to AWS S3
+        uses: jakejarvis/s3-sync-action@master
+        with:
+          args: --acl public-read --follow-symlinks --delete
+        env:
+          AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          SOURCE_DIR: './app'

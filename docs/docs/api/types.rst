@@ -28,11 +28,11 @@ Taks configuration
 Training modes
 ==============
 
-.. autoclass:: ddpw.trainer.TrainingMode
+.. autoclass:: ddpw.job.JobMode
   :members:
 
 Configurations
 ==============
 
-.. autoclass:: ddpw.trainer.TrainingConfig
+.. autoclass:: ddpw.job.JobConfig
   :members:
