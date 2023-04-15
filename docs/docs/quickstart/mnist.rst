@@ -6,8 +6,7 @@ Example with MNIST
 =================
 
 .. code-block:: python
-
-  # src/dataset.py
+  :caption: src/dataset.py
 
   from torchvision import transforms as T
   from torchvision.datasets.mnist import MNIST
@@ -29,8 +28,7 @@ Example with MNIST
 ===============
 
 .. code-block:: python
-
-  # src/model.py
+  :caption: src/model.py
 
   import torch
   from torch.nn import functional as F
@@ -68,33 +66,12 @@ Example with MNIST
       return F.log_softmax(x, 1)
 
 
-3. Custom optimiser
-===================
-.. _MNIST custom optimiser:
-
-.. code-block:: python
-
-  # src/optimiser.py
-
-  import torch
-  from ddpw.artefacts import OptimiserLoader
-
-
-  class MyOptimiser(OptimiserLoader):
-    def __init__(self, lr=0.1):
-      self.lr = lr
-
-    def __call__(self, model: torch.nn.Module) -> torch.optim.Optimizer:
-      return torch.optim.Adadelta(params=model.parameters(), lr=self.lr)
-
-
-4. Custom job
+3. Custom job
 =================
 .. _MNIST custom job:
 
 .. code-block:: python
-
-  # src/train.py
+  :caption: src/train.py
 
   import torch
   from torch.utils import data
@@ -107,35 +84,30 @@ Example with MNIST
 
 
   class MyTrainer(Job):
-    def __init__(self, j_config: JobConfig):
-      super(MyTrainer, self).__init__(j_config=j_config)
+    start_at = 0
+    epochs = 10
 
-    def train(self, global_rank: int):
+    def __call__(self, global_rank: int, local_rank: int):
       train_set = self.a_config.train_set
+      model = self.a_config.model.train()
+      optimiser = torch.optim.SGD(model.parameters(), lr=1e-2)
 
       # for every epoch
-      for e in range(self.j_config.start_at, self.j_config.epochs):
-        self.a_config.model.train()
-
-        training_loss = torch.Tensor([0])
-        training_accuracy = torch.Tensor([0])
-
-        model_device = next(self.a_config.model.parameters()).device
-
+      for e in range(self.start_at, self.epochs):
         # training
         for _, (datapoints, labels) in enumerate(train_set):
-          self.a_config.optimiser.zero_grad()
+          optimiser.zero_grad()
 
-          preds = self.a_config.model(datapoints.to(model_device))
+          preds = model(datapoints.to(model_device))
           loss = F.nll_loss(preds, labels.to(model_device))
           training_loss += loss.item()
           loss.backward()
 
           # average and synchronise the gradients at the end of each batch
           if self.p_config.requires_ipc:
-            Utils.all_average_gradients(self.a_config.model)
+            Utils.average_params_grads(model)
 
-          self.a_config.optimiser.step()
+          optimiser.step()
 
         training_loss /= len(train_set)
 
@@ -149,27 +121,3 @@ Example with MNIST
         if global_rank == 0:
           # code for storing logs and saving state
           pass
-
-    def evaluate(self, global_rank: int, dataset: data.DataLoader = None):
-      if dataset is None:
-        dataset = self.a_config.test_set
-      assert dataset is not None
-
-      accuracy = torch.Tensor([0])
-      self.a_config.model.eval()
-      model_device = next(self.a_config.model.parameters()).device
-      with torch.no_grad():
-        for _, (datapoints, labels) in enumerate(dataset):
-          preds = self.a_config.model(datapoints.to(model_device))
-          num_correct = (preds.argmax(1) == labels.to(model_device)).sum().item()
-          [num_samples, *_] = datapoints.shape
-          accuracy += (num_correct / num_samples)
-        accuracy *= 100/len(dataset)
-
-        if self.p_config.requires_ipc:
-          dist.all_reduce(accuracy)
-          accuracy /= dist.get_world_size()
-
-      if global_rank == 0: print(f'\tAccuracy: {accuracy.item()}')
-
-      return accuracy

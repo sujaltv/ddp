@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import final
+from typing import final, Optional, Callable
 from dataclasses import dataclass
 
 import torch.distributed as dist
@@ -21,6 +21,24 @@ class Platform(Enum):
 
   MPS = 3
   r"""The platform to run on is Mac's Apple M1 SoCs."""
+
+  @staticmethod
+  def from_num(num: int) -> 'Platform':
+    r"""
+    Given a device number, this method returns the corresponding platform.
+
+    :param int num: The platform number.
+    :returns Platform: The platform corresponding to the provided argument.
+    :raises ArgumentError: Raises argument error if the number if invalid.
+    """
+
+    match num:
+      case 0: return Platform.CPU
+      case 1: return Platform.GPU
+      case 2: return Platform.SLURM
+      case 3: return Platform.MPS
+      case _: raise ArgumentError("Undefined platform number given")
+
 
 @final
 @dataclass
@@ -75,6 +93,9 @@ class PlatformConfig(object):
 
   cpus_per_task: int = 1
   r"""Number of CPUs per task. Default: ``1``."""
+
+  upon_finish: Optional[Callable] = None
+  r"""Any cleanup tasks to be done upon completion. Default: ``None``."""
 
   @property
   def world_size(self):

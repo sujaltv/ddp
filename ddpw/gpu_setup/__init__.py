@@ -66,8 +66,8 @@ def init_process(global_rank: int, local_rank: int, run: Job,
   Utils.print(f'[Device {global_rank}] Training model on device {local_rank}.')
   if p_config.requires_ipc:
     dist.barrier()
-  run.p_config = p_config
   run.a_config = a_config
+  run.p_config = p_config
 
   Utils.print(f'[Device {global_rank}] All setup finished.')
   run(global_rank, local_rank)
@@ -75,4 +75,4 @@ def init_process(global_rank: int, local_rank: int, run: Job,
   if p_config.requires_ipc:
     dist.destroy_process_group()
 
-  Utils.print('Tasks on device complete.')
+  Utils.print(f'[Device {global_rank}] Tasks on device complete.')

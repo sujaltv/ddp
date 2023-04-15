@@ -1,5 +1,6 @@
 name: base
 channels:
+  - anaconda
   - pytorch
   - conda-forge
   - defaults
@@ -8,6 +9,7 @@ dependencies:
   - anaconda-client
   - submitit
   - numpy
-  - python=3.8
-  - pytorch=1.10.1
+  - python==3.10
+  - pytorch
   - conda-build
+  - wheel

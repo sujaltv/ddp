@@ -24,40 +24,32 @@ class Utils(object):
       if 'verbose' in kwargs: del(kwargs['verbose'])
       print(*args, **kwargs)
 
-
   @staticmethod
-  def all_average_gradients(model: torch.nn.Module):
+  def average_params_grads(model: torch.nn.Module, params: bool = False,
+                           grads: bool = True):
     r"""
-    Given a model, this method averages the gradients of the model across all
-    the GPUs in the world. Copied and modified from `PyTorch Blog
-    <https://pytorch.org/tutorials/intermediate/dist_tuto.html>`_.
+    Given a model, this method averages the parameters and/or their gradients of
+    the model across all the GPUs in the world. Copied and modified from
+    `PyTorch Blog <https://pytorch.org/tutorials/intermediate/dist_tuto.html>`_.
 
-    :param nn.Module model: The model whose gradients are to be averaged.
+    :param nn.Module model: The model whose parameters/gradients are to be
+        averaged.
+    :param bool params: Whether to average the parameters or not. Default:
+        `False`
+    :param bool grads: Whether to average the gradients or not. Default: `True`
     """
+
+    if not (params and grads): return
 
     world_size = float(dist.get_world_size())
 
-    for params in model.parameters():
-      if params.grad is None: continue
-      dist.all_reduce(params.grad, op=dist.ReduceOp.SUM)
-      params.grad /= world_size
-
-
-  @staticmethod
-  def all_params_gradients(model: torch.nn.Module):
-    r"""
-    Given a model, this method averages the parameters of the model across all
-    the GPUs in the world.
-
-    :param nn.Module model: The model whose parameters are to be averaged.
-    """
-
-    world_size = float(dist.get_world_size())
-
-    for params in model.parameters():
-      if params is None: continue
-      dist.all_reduce(params, op=dist.ReduceOp.SUM)
-      params /= world_size
+    for p in model.parameters():
+      if p.grad is not None and grads:
+        dist.all_reduce(p.grad, op=dist.ReduceOp.SUM)
+        p.grad /= world_size
+      if p is not None and params:
+        dist.all_reduce(p, op=dist.ReduceOp.SUM)
+        p /= world_size
 
   @staticmethod
   def optimiser_to(optimiser: torch.optim.Optimizer, device: torch.device):

@@ -21,18 +21,3 @@ Artefacts configuration
 
 .. autoclass:: ddpw.artefacts.ArtefactsConfig
   :members:
-
-Taks configuration
-^^^^^^^^^^^^^^^^^^
-
-Training modes
-==============
-
-.. autoclass:: ddpw.job.JobMode
-  :members:
-
-Configurations
-==============
-
-.. autoclass:: ddpw.job.JobConfig
-  :members:

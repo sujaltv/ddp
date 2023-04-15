@@ -23,6 +23,6 @@ setup(
     "Operating System :: Microsoft :: Windows",
     "Operating System :: POSIX :: Linux"
   ],
-  python_requires='>=3.8',
-  install_requires=['numpy>=1.22.2', 'submitit>=1.2.1', 'torch>=1.10.1']
+  python_requires='>=3.10',
+  install_requires=['numpy>=1.22.2', 'submitit>=1.2.1', 'torch>=2.0.0']
 )
