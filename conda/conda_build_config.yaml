@@ -1,3 +1,7 @@
-python:
-  - 3.8
-  - 3.9
+---
+conda_build_config:
+  variants:
+    - pytorch: [2.0]
+    - numpy: [1.22]
+    - submitit: [1.4]
+...

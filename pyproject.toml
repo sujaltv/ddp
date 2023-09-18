@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ddpw"
+version = "5.2.1"
+description = "A lightweight wrapper that scaffolds PyTorch's (Distributed Data) Parallel."
+authors = [ { name = "Sujal Vijayaraghavan" } ]
+maintainers = [ { name = "Sujal Vijayaraghavan" } ]
+readme = "README.md"
+
+[tool.poetry]
+homepage = "https://ddpw.projects.sujal.tv"
+repository = "https://github.com/sujaltv/ddpw"
+documentation = "https://ddpw.projects.sujal.tv"
+keywords = [ "pytorch", "distributed" ]
+licence = "BDS-3-Clause"
+
+[tool.setuptools]
+packages = [ "ddpw" ]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+numpy = "^1.24.0"
+torch = "^2.0.0"
+submitit = "^1.4.5"

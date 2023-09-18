@@ -1,15 +1,13 @@
 from setuptools import setup, find_packages
 
-from ddpw import __version__, __build__
-
 
 with open("README.md", "r", encoding="utf-8") as f:
   long_description = f.read()
 
 setup(
   name="ddpw",
-  version=__version__,
-  build=__build__,
+  version='5.2.1',
+  build='0',
   author="Sujal T.V.",
   url="https://ddpw.projects.sujal.tv",
   description=r"""A utility package to scaffold PyTorch's DDP""",

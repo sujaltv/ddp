@@ -1,20 +1,24 @@
+---
 name: Publish to Anaconda
 
 on:
   workflow_dispatch:
     branches:
       - master
-      - dev
 
 jobs:
   publish:
+    name: Build and publish to Anaconda
     runs-on: ubuntu-latest
-    name: Conda Publish
+
     steps:
-    - uses: actions/checkout@v2
-    - name: Publish to Anaconda
-      uses: fcakyon/conda-publish-action@v1.3
-      with:
-        subdir: 'conda'
-        anacondatoken: ${{ secrets.ANACONDA_TOKEN }}
-        platforms: 'noarch'
+      - name: Checkout source code
+        uses: actions/checkout@v3
+
+      - name: Publish to Anaconda
+        uses: fcakyon/conda-publish-action@v1.3
+        with:
+          subdir: 'conda'
+          anacondatoken: ${{ secrets.ANACONDA_TOKEN }}
+          platforms: 'noarch'
+...

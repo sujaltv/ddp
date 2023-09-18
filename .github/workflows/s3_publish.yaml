@@ -1,29 +1,36 @@
+---
 name: Upload to AWS S3
+
 on:
   workflow_dispatch:
     branches:
       - master
-      - dev
+
 jobs:
   deploy:
     name: Copy and deploy to AWS S3
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checking out source code
-        uses: actions/checkout@v2
+      - name: Checkout source code
+        uses: actions/checkout@v3
+
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v3
         with:
-          python-version: 3.8
-      - name: Instal and build
+          python-version: "3.10"
+
+      - name: Instal dependencies and build the documentation
         run: |
           pip install -r requirements.txt
           cd docs
           make html
-      - name: Copying build files
+
+      - name: Copy build files
         run: |
           mkdir app
           cp -r docs/build/html/** ./app
+
       - name: Publish to AWS S3
         uses: jakejarvis/s3-sync-action@master
         with:
@@ -34,3 +41,4 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
           SOURCE_DIR: './app'
+...

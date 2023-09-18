@@ -2,7 +2,7 @@
 
 SPHINXOPTS    ?=
 SPHINXBUILD   ?= sphinx-build
-SOURCEDIR     = docs
+SOURCEDIR     = src
 BUILDDIR      = build
 
 help:

@@ -1,2 +1,2 @@
-__version__ = '4.0.0'
-__build__ = '0'
+from .platform import Device, Platform
+from .wrapper import Wrapper
