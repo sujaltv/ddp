@@ -1,46 +1,50 @@
-import random
+from random import seed as rand_seed
 from typing import Optional
 
-import numpy as np
-import torch
-from torch import nn
+from numpy.random import seed as np_seed
+from torch import Tensor
+from torch import device as t_device
 from torch import distributed as dist
-from torch.nn import SyncBatchNorm
+from torch.cuda import current_device, is_available, manual_seed_all
+from torch.nn import BatchNorm1d, BatchNorm2d, BatchNorm3d, Module, SyncBatchNorm
 from torch.nn.parallel import DistributedDataParallel
+from torch.optim import Optimizer
+from torch.random import manual_seed
 from torch.utils.data import Dataset, DistributedSampler
- 
+
 from .platform import Device, Platform
 
 
 def seed_generators(seed: int):
     r"""
-    This function seeds (pseudo)random number generators from various packages.
+    This function seeds [pseudo]random number generators from various packages.
 
     :param int seed: The seed.
     """
 
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.random.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
+    rand_seed(seed)
+    np_seed(seed)
+    manual_seed(seed)
+    manual_seed_all(seed)
 
 
-def average_params_grads(module: torch.nn.Module, params: bool = False,
-                         grads: bool = True):
+def average_params_grads(module: Module, params: bool = False, grads: bool = True):
     r"""
-    Given a module, this function averages the parameters and/or their gradients
-    of the model across all the GPUs. (Copied and modified from
-    `PyTorch Blog <https://pytorch.org/tutorials/intermediate/dist_tuto.html>`_)
+    Given a module, this function averages the parameters of the given model
+    and/or their gradients across all the GPUs (copied over from a `PyTorch blog
+    <https://pytorch.org/tutorials/intermediate/dist_tuto.html>`_ and further
+    modified here).
 
-    :param nn.Module module: The module whose parameters/gradients are to be
-        averaged.
+    :param torch.nn.Module module: The module whose parameters/gradients are to
+        be averaged.
     :param bool params: Whether to average the parameters or not. Default:
         ``False``.
     :param bool grads: Whether to average the gradients or not. Default:
         ``True``.
     """
 
-    if not (params and grads): return
+    if not (params and grads):
+        return
 
     world_size = float(dist.get_world_size())
 
@@ -53,13 +57,12 @@ def average_params_grads(module: torch.nn.Module, params: bool = False,
             p /= world_size
 
 
-def optimiser_to(optimiser: torch.optim.Optimizer, device: torch.device):
+def optimiser_to(optimiser: Optimizer, device: t_device):
     r"""
     This function offers a simple way to move all the parameters optimised by an
     optimiser to the specified device. This function has been taken as is from a
-    `solution
-    <https://discuss.pytorch.org/t/moving-optimizer-from-cpu-to-gpu/96068/3>`_
-    on `PyTorch Discuss <https://discuss.pytorch.org>`_.
+    `solution on PyTorch Discuss
+    <https://discuss.pytorch.org/t/moving-optimizer-from-cpu-to-gpu/96068/3>`_.
 
     :param torch.optim.Optimizer optimiser: The optimiser to move to a device.
     :param torch.device device: The device to which to move the optimiser.
@@ -67,19 +70,19 @@ def optimiser_to(optimiser: torch.optim.Optimizer, device: torch.device):
 
     for param in optimiser.state.values():
         # if any global tensors in the state dict
-        if isinstance(param, torch.Tensor):
+        if isinstance(param, Tensor):
             param.data = param.data.to(device)
             if param._grad is not None:
                 param._grad.data = param._grad.data.to(device)
         elif isinstance(param, dict):
             for subparam in param.values():
-                if isinstance(subparam, torch.Tensor):
+                if isinstance(subparam, Tensor):
                     subparam.data = subparam.data.to(device)
                     if subparam._grad is not None:
                         subparam._grad.data = subparam._grad.data.to(device)
 
 
-def has_batch_norm(module: nn.Module) -> bool:
+def has_batch_norm(module: Module) -> bool:
     r"""
     This function checks if a module has batch normalisation layer(s) in it.
 
@@ -90,17 +93,22 @@ def has_batch_norm(module: nn.Module) -> bool:
         it.
     """
 
-    if isinstance(module, (nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm2d)):
+    if isinstance(module, (BatchNorm1d, BatchNorm2d, BatchNorm3d)):
         return True
-    
+
     for child in module.children():
-        if has_batch_norm(child): return True
-    
+        if has_batch_norm(child):
+            return True
+
     return False
 
 
-def to(module: torch.nn.Module, local_rank: int, sync_modules: bool = True,
-       device: Device = Device.GPU) -> nn.Module:
+def to(
+    module: Module,
+    local_rank: int,
+    sync_modules: bool = True,
+    device: Device = Device.GPU,
+) -> Module:
     r"""
     A quick and minimal function that works on all devices to move the given
     module to the specified device: CPU, GPU, or MPS. If the platform is set up
@@ -115,8 +123,9 @@ def to(module: torch.nn.Module, local_rank: int, sync_modules: bool = True,
         ``True``.
     :param Device device: The type of device to which to move the module. This
         argument is useful because once ``device`` has been globally set, this
-        function can be called regardless of the device and thus helps avoid
-        additional checks. Default: ``Device.GPU``.
+        function can be called regardless of the current device in which the
+        items are and thus helps avoid additional checks. Default:
+        ``Device.GPU``.
 
     :returns torch.nn.Module: The module moved to the appropriate device.
     """
@@ -125,21 +134,23 @@ def to(module: torch.nn.Module, local_rank: int, sync_modules: bool = True,
         case Device.CPU | Device.MPS:
             module = module.to(device.value)
         case _:
-            module = module.cuda(torch.device(local_rank))
+            module = module.cuda(t_device(local_rank))
 
     if sync_modules and device not in [Device.CPU, Device.MPS]:
         if has_batch_norm(module):
             module = SyncBatchNorm.convert_sync_batchnorm(module)
 
         if dist.is_initialized():
-            module = DistributedDataParallel(module, device_ids=[local_rank],
-                                             find_unused_parameters=False)
+            module = DistributedDataParallel(
+                module, device_ids=[local_rank], find_unused_parameters=False
+            )
 
     return module
 
 
-def get_dataset_sampler(dataset: Dataset, global_rank: int,
-                        platform: Platform) -> Optional[DistributedSampler]:
+def get_dataset_sampler(
+    dataset: Dataset, global_rank: int, platform: Platform
+) -> Optional[DistributedSampler]:
     r"""
     This function selects a portion of the original dataset shared by other
     devices. If the device is CPU or MPS, no sharing is necessary.
@@ -156,13 +167,14 @@ def get_dataset_sampler(dataset: Dataset, global_rank: int,
     sampler = None
 
     if platform.device not in [Device.CPU, Device.MPS]:
-        sampler = DistributedSampler(dataset, num_replicas=platform.world_size,
-                                     rank=global_rank)
+        sampler = DistributedSampler(
+            dataset, num_replicas=platform.world_size, rank=global_rank
+        )
 
     return sampler
 
- 
-def device(module: torch.nn.Module) -> torch.device:
+
+def device(module: Module) -> t_device:
     r"""
     Given a module, this function returns the device on which it currently
     resides. If the module has no parameters, the current device is returned by
@@ -173,16 +185,17 @@ def device(module: torch.nn.Module) -> torch.device:
     :returns torch.device: The device of the module.
     """
 
+    from torch.backends.mps import is_available as is_mps_available
+
     p = module.parameters()
     try:
         device = next(p).device
     except StopIteration:
-        if torch.cuda.is_available():
-            device = torch.device(f'cuda:{torch.cuda.current_device()}')
-        elif torch.backends.mps.is_available():
-            device = torch.device('mps')
+        if is_available():
+            device = t_device(f"cuda:{current_device()}")
+        elif is_mps_available():
+            device = t_device("mps")
         else:
-            device = torch.device('cpu')
+            device = t_device("cpu")
 
     return device
-

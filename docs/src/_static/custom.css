@@ -1,0 +1,429 @@
+/* ----------------------------------------------------------------------------
+ *                              Basic styling
+ * ------------------------------------------------------------------------- */
+
+* {
+    --code-font-size: 9.25pt; 
+    --api-font-size: 10.5pt;
+    --header-height: 40px;
+    --footer-height: 85px;
+    --footer-padding-top: 5px;
+
+    --heading-font: "VC Honey SemiBold Deck", serif;
+    --main-font: "SF Pro Display", sans-serif;
+    --mono-font: "SF Mono", monospace;
+
+    --main-content-padding: 20px;
+}
+
+html {
+    scroll-padding-top: var(--header-height);
+}
+
+body {
+    font-family: var(--main-font);
+    letter-spacing: 0.25pt;
+    /* line-height: 14pt; */
+}
+
+h1, h2, h3, h4, h5, h6, .rubric {
+    font-family: var(--heading-font);
+    font-weight: 500 !important;
+}
+ 
+h1 {
+    font-size: 20pt;
+}
+
+h2 {
+    margin-top: 20px;
+    font-size: 14pt;
+}
+
+h3 {
+    font-size: 12pt;
+}
+
+h4 {
+    font-size: 10pt;
+}
+
+a {
+    text-decoration: none !important;
+}
+
+.prima-facie a:visited {
+    color: var(--color-link) !important;
+}
+
+p {
+    font-family: var(--main-font);
+    font-size: 11.625pt;
+}
+
+article > section:not(:last-child) {
+   margin-bottom: 40px; 
+}
+
+pre, .code {
+    font-family: var(--mono-font);
+}
+
+dl > dt {
+    font-size: initial;
+}
+
+figure {
+    margin-bottom: 20px !important;
+}
+
+figure img, img {
+    margin-top: 20px;
+    border-radius: 10px;
+}
+
+figure img:not(:has(+ figcaption)), img:not(:has(+ figcaption)) {
+    margin-bottom: 20px;
+}
+
+figcaption {
+    border-top: 1px solid var(--color-background-border);
+    margin: 10px clamp(10px, 200px, 15%) 0px clamp(10px, 200px, 15%);
+    text-align: left;
+    padding: 5px 10px;
+}
+
+figcaption > p:first-child {
+    margin-top: 0;
+}
+
+figcaption .caption-text::before {
+    content: 'Figure. ';
+    font-weight: bold;
+}
+
+figcaption .caption-text {
+    font-size: 0.85rem;
+    color: var(--color-foreground-secondary);
+}
+
+
+/* ----------------------------------------------------------------------------
+ *                              Layout styling
+ * ------------------------------------------------------------------------- */
+
+.app {
+    position: relative;
+    min-height: calc(100% - var(--footer-height) - var(--footer-padding-top));
+    padding-bottom: var(--footer-padding-top);
+}
+
+.prima-facie {
+    margin: 0 auto;
+    max-width: 40em;
+    width: 100%;
+    display: block;
+    align-items: center;
+    justify-content: center;
+}
+
+.centre {
+    margin: 0 auto;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+header {
+    top: 0px;
+    position: sticky;
+    z-index: 1000;
+    height: var(--header-height);
+}
+
+.header-style {
+    display: flex;
+    border-bottom: 1px solid var(--color-background-border);
+    padding: 10px;
+    background: var(--color-background-primary);
+    font-family: var(--heading-font);
+}
+
+@media(min-width: 82em) {
+    .header-style {
+        box-shadow: 0 0 5px 1px var(--color-background-border);
+    }
+}
+
+.header-style > .brand {
+    display: flex;
+    align-items: center;
+}
+
+.header-style span {
+    font-size: 22pt;
+    text-decoration: none !important;
+}
+
+.header-contents {
+    width: 100%;
+    display: flex;
+}
+
+footer {
+    height: var(--footer-height);
+    margin: 0 !important;
+    background: var(--color-background-primary);
+    position: absolute;
+    bottom: calc(-1 * var(--footer-height));
+    width: 100%;
+    padding: var(--footer-padding-top) 0 !important;
+    border-top: 1px solid var(--color-background-border);
+    z-index: 30;
+}
+
+.search-summary,
+.context,
+.footer-style {
+    color: var(--color-foreground-secondary);
+    line-height: 1.5;
+    font-size: 0.75em;
+}
+
+.main-content-pane {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+}
+
+.main-content {
+    display: flex;
+    flex-direction: column;
+    padding: 0px var(--main-content-padding);
+    padding-bottom: 20px;
+}
+
+.main-content-nav-bar {
+    display: none;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    display: flex;
+    position: sticky;
+    top: calc(var(--header-height) + 20.5px);
+    background: var(--color-background-primary);
+    z-index: 15;
+}
+
+.main-content-nav-bar .icon {
+    height: 1.125rem;
+    width: 1.125rem;
+}
+
+.rugged {
+    margin: 0;
+}
+
+/* ----------------------------------------------------------------------------
+ *                              Miscellaneous
+ * ------------------------------------------------------------------------- */
+
+.icon {
+    display: block;
+    height: 20px;
+    width: 20px;
+}
+
+.simple-list {
+    list-style-type: none;
+    margin: 0;
+}
+
+.external-links {
+    text-align: center;
+    padding: 10px;
+    display: flex;
+    justify-content: center;
+}
+
+/* ----------------------------------------------------------------------------
+ *                              Furo-overrides
+ * ------------------------------------------------------------------------- */
+
+.header-style .theme-toggle-container {
+    position: absolute;
+    right: 20px;
+}
+
+.back-to-top {
+    z-index: 16;
+    top: calc(var(--header-height) + 20px + 4px);
+    /* bottom: calc(var(--footer-height) + var(--footer-padding-top) + 5px); */
+    /* top: auto; */
+}
+
+.field-list > strong {
+    font-family: var(--mono-font);
+}
+.field-list > dd > p > strong,
+.field-list > dd > p > em,
+.field-list > dd > p > a.reference.internal,
+.field-list > dd > ul > li > p > strong,
+.field-list > dd > ul > li > p > a.reference.internal,
+.field-list > dd > ul > li > p > em {
+  font-family: var(--font-stack--monospace);
+  font-style: normal;
+  font-size: var(--code-font-size);
+  color: var(--color-api-name);
+}
+
+.field-list > dd > p > a.reference.internal,
+.field-list > dd > ul > li > p > a.reference.internal {
+  font-weight: bold;
+}
+
+.sidebar-drawer {
+    position: fixed;
+    left: 0px;
+}
+
+.footnote-list, .footnote-list * {
+    font-size: 0.75rem;
+}
+
+.fn-bracket {
+    display: none;
+}
+
+.admonition > * {
+    font-family: var(--main-font);
+}
+
+.admonition * {
+    font-size: 10pt;
+}
+
+.sidebar-drawer {
+    position: fixed;
+    top: calc(var(--header-height) + 2 * var(--header-padding));
+}
+
+.sidebar-brand {
+    display: none;
+}
+
+.sidebar-scroll {
+    /* 80px below = searchbox height */
+    max-height: calc(100% - var(--header-height) - var(--footer-height) - 80px);
+}
+
+.toc-drawer {
+    position: fixed;
+    right: calc(100% - calc(50% - 26em) - 65em);
+    z-index: 30;
+    top: calc(var(--header-height) + 2 * var(--header-padding));
+    overflow-y: scroll;
+}
+
+.toc-overlay {
+    z-index: 20;
+}
+
+.toc-scroll {
+    height: 100%;
+    max-height: calc(100vh - var(--header-height) - 2 * var(--header-padding) - var(--footer-padding-top) - var(--footer-height));
+}
+
+@media(max-width: 82em) {
+    .main-content-nav-bar {
+        display: flex;
+        border-bottom: 1px solid var(--color-background-border);
+        padding: 10px 20px;
+    }
+
+    .sidebar-drawer {
+        visibility: hidden;
+    }
+
+    .toc-drawer {
+        visibility: hidden;
+        right: 0;
+        max-height: calc(100% - var(--header-height));
+        overflow: scroll;
+    }
+
+    .toc-overlay-icon, .nav-overlay-icon {
+        display: flex;
+    }
+}
+
+@media(min-width: 82em) {
+    .sidebar-drawer {
+        visibility: visible;
+    }
+
+    .toc-drawer {
+        visibility: visible;
+    }
+}
+
+.content-icon-container {
+    margin: 0;
+}
+
+.search li {
+    border: 1px solid var(--color-background-border) !important;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    padding: 10px !important;
+}
+
+.search li * {
+    font-size: 0.85rem;
+}
+
+.related-pages {
+    display: none;
+    margin-top: 20px;
+    border-top: 1px solid var(--color-background-border);
+    padding: 10px 0;
+    font-size: 0.8rem;
+}
+
+.footnote-reference {
+    left: -2px;
+    position: relative;
+}
+
+.rubric {
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid var(--color-background-border);
+}
+
+hr.docutils {
+    display: none;
+}
+
+.line-block {
+    height: 5px;
+}
+
+/* ----------------------------------------------------------------------------
+ *                              toctree handling
+ * ------------------------------------------------------------------------- */
+
+[class^="toctree-l"].has-children > a {
+    pointer-events: none;
+    cursor: default;
+    color: var(--color-sidebar-caption-text) !important;
+}
+
+[class^="toctree-l"].has-children > label {
+    visibility:collapse;
+}
+
+[class^="toctree-l"]:not(.has-children) a {
+    color: var(--color-link) !important;
+}
+

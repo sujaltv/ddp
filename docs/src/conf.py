@@ -1,6 +1,5 @@
 import os
 import sys
-import datetime
 
 
 sys.path.insert(0, os.path.abspath('../..'))
@@ -28,7 +27,8 @@ extensions = [
 html_theme = 'furo'
 html_show_sourcelink = False
 html_show_copyright = True
-copyright = f"2021-{datetime.date.today().year} Sujal Vijayaraghavan"
+copyright = f"Sujal"
+html_favicon = './assets/favicon.ico'
 html_show_sphinx = False
 html_title = 'DDPW'
 html_theme_options = {
@@ -44,13 +44,18 @@ html_theme_options = {
             "class": "",
         },
     ],
+    "sidebar_hide_name": True
 }
+html_static_path = ['_static']
+html_css_files = ['fonts.css', 'custom.css']
 
 html_context = {
     "display_github": True,  # 'Edit on Github' instead of 'View page source'
     "github_user": "sujaltv",
     "github_repo": "ddpw",
-    "github_version": "master"
+    "github_version": "master",
+    "copyright_duration": "2021-2024",
+    "copyright_url": "https://sujal.tv"
 }
 
 pygments_style = "friendly"
@@ -62,7 +67,18 @@ bibtex_reference_style = 'super'
 bibtex_bibliography_header = ".. rubric:: References"
 bibtex_footbibliography_header = bibtex_bibliography_header
 
+# sphinx-autodoc
 add_module_names = True # autocode to show only the final name
-autodoc_preserve_defaults = True # True does not evaluate default values
-autodoc_typehints_format = 'short' # short typehints for class/method arguments
 autodoc_member_order = "bysource"
+autodoc_class_signature = 'mixed' # show init arguments without __init__
+autodoc_preserve_defaults = True # True does not evaluate default values
+autodoc_typehints = 'signature'
+autodoc_typehints_format = 'short' # short typehints for class/method arguments
+
+# sphinx-autodoc-typehints
+typehints_fully_qualified = False # return type name resolution
+typehints_use_signature = True
+typehints_use_signature_return = True
+typehints_document_rtype = False # show or hide return type
+typehints_use_rtype = True
+

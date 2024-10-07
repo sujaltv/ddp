@@ -1,10 +1,10 @@
+from dataclasses import dataclass, field
 from enum import Enum
 from random import randint
-from typing import List, final, Optional, Callable
-from dataclasses import dataclass, field
+from typing import Callable, List, Optional, final
 
-import torch
 from torch import distributed as dist
+from torch.cuda import device_count
 
 from .io import IO
 
@@ -13,20 +13,20 @@ from .io import IO
 class Device(Enum):
     r"""The device on which to run the task."""
 
-    CPU = 'cpu'
+    CPU = "cpu"
     r"""The device to run on is a CPU."""
 
-    GPU = 'gpu'
+    GPU = "gpu"
     r"""The device to run on is one or more GPUs."""
 
-    SLURM = 'slurm'
+    SLURM = "slurm"
     r"""The device to run on is a cluster of GPU nodes managed by SLURM."""
 
-    MPS = 'mps'
+    MPS = "mps"
     r"""The device to run on is Apple SoC."""
 
     @staticmethod
-    def from_str(device: str) -> 'Device':
+    def from_str(device: str) -> "Device":
         r"""
         This method returns a :py:class:`Device` object given a valid device
         string.
@@ -36,16 +36,21 @@ class Device(Enum):
 
         :returns Device: :py:class:`Device` corresponds to the device type
             string.
-        
+
         :raises ValueError: Raises an error if the string is invalid.
         """
 
         match device.lower():
-            case 'cpu': return Device.CPU
-            case 'gpu': return Device.GPU
-            case 'slurm': return Device.SLURM
-            case 'mps': return Device.MPS
-            case _: raise ValueError("Invalid device string specified.")
+            case "cpu":
+                return Device.CPU
+            case "gpu":
+                return Device.GPU
+            case "slurm":
+                return Device.SLURM
+            case "mps":
+                return Device.MPS
+            case _:
+                raise ValueError("Invalid device string specified.")
 
 
 @final
@@ -54,38 +59,51 @@ class Platform:
     r"""
     Platform-related configurations such as the device, environment,
     communication IP address and port, world size, `etc.`
+
+    .. admonition:: Examples
+        :class: tip
+
+        .. code:: python
+
+            from ddpw import Platform
+
+            # a setup with 4 GPUs
+            platform = Platform(device='gpu', n_gpus=4)
+
+            # a setup to request SLURM for 2 nodes, each with 3 GPUs in the "example" partition
+            platform = Platform(device='slurm', n_nodes=2, n_gpus=3, partition='example')
     """
 
-    name: str = 'ddpw'
+    name: str = "ddpw"
     r"""Name of the platform job. Used by SLURM. Default: ``ddpw``."""
 
     device: Device | str = Device.GPU
     r"""The type of device. Default: ``Device.GPU``."""
 
-    partition: str = 'general'
-    r"""Name of the partition. Used by SLURM. Default: ``general``."""
+    partition: str = "general"
+    r"""Name of the SLURM partition (used only by SLURM). Default: ``general``."""
 
     n_nodes: int = 1
-    r"""The total number of nodes (used by SLURM).  Default: ``1``."""
+    r"""The total number of nodes (used only by SLURM).  Default: ``1``."""
 
     n_gpus: int = 1
     r"""The number of GPUs (per node). Default: ``1``."""
 
     n_cpus: int = 1
-    r"""The total number of CPUs (used by SLURM). Default: ``1``."""
+    r"""The total number of CPUs (used only by SLURM). Default: ``1``."""
 
     ram: int = 32
-    r"""Total RAM (in GB) (used by SLURM). Default: ``32``."""
+    r"""Total RAM (in GB) (used only by SLURM). Default: ``32``."""
 
-    spawn_method: Optional[str] = 'fork'
-    r"""This property corresponds to that passed to
-    :meth:`mp.set_start_method`. Default: ``fork``."""
+    spawn_method: Optional[str] = "fork"
+    r"""This string corresponds to that passed to :meth:`mp.set_start_method`.
+    Default: ``fork``."""
 
-    ipc_protocol: str = 'tcp'
+    ipc_protocol: str = "tcp"
     r"""IPC protocol. Accepted values: ``tcp`` and ``file``. Default:
     ``tcp``."""
 
-    master_addr: str = 'localhost'
+    master_addr: str = "localhost"
     r"""IPC address. Default: ``localhost``."""
 
     master_port: Optional[str] = str(randint(1024, 49151))
@@ -94,13 +112,13 @@ class Platform:
 
     ipc_groups: Optional[List[List[int]]] = field(default_factory=lambda: [])
 
-    r"""A list of list of non-overlaping global ranks of devices. If ``None``,
+    r"""A list of lists of non-overlapping global ranks of devices. If ``None``,
     every device will be its own group, and no IPC will take place. If an empty
     list is passed, all devices are grouped into one process group. Default:
     ``[]``.
 
     .. admonition:: Examples
-        :class: note
+        :class: tip
 
         .. code:: python
 
@@ -123,8 +141,9 @@ class Platform:
         issue is on GitHub.
     """
 
-    backend: Optional[dist.Backend] = dist.Backend.GLOO if \
-        hasattr(dist, 'Backend') else None
+    backend: Optional[dist.Backend] = (
+        dist.Backend.GLOO if hasattr(dist, "Backend") else None
+    )
     r"""The PyTorch-supported backend to use for distributed data parallel.
     Default: ``torch.distributed.Backend.GLOO``."""
 
@@ -133,23 +152,26 @@ class Platform:
     generators. Default: ``1889``."""
 
     timeout_min: int = 2880
-    r"""Minimum timeout (in minutes) for jobs (used by SLURM). Default:
+    r"""Minimum timeout (in minutes) for jobs (used only by SLURM). Default:
     ``2880`` (two days)."""
 
     slurm_additional_parameters: Optional[dict] = None
-    r"""Additional SLURM parameters; this dictionary corresponds to
-    ``submitit``'s ``slurm_additional_parameters`` `argument
+    r"""Additional SLURM parameters; this dictionary corresponds to the one
+    passed to ``submitit``'s ``slurm_additional_parameters`` `argument
     <https://github.com/facebookincubator/submitit/issues/23>`_. Default:
     ``None``."""
 
-    console_logs: str = './logs'
-    r"""Location of console logs (used by SLURM). Default: ``./logs``"""
+    console_logs: str = "./logs"
+    r"""Location of console logs (used mainly by SLURM to log the errors and
+    output to files). Default: ``./logs``"""
 
     verbose: Optional[bool] = True
-    r"""Whether or not to output updates during setup. Default: ``True``."""
+    r"""Whether or not to print updates to the standard output during setup.
+    Default: ``True``."""
 
     upon_finish: Optional[Callable] = None
-    r"""A callable task to be invoked upon completion. Default: ``None``."""
+    r"""An optional callable to be invoked upon completion of the given task.
+    Default: ``None``."""
 
     def __post_init__(self):
         if isinstance(self.device, str):
@@ -157,31 +179,38 @@ class Platform:
 
     @property
     def world_size(self):
-        r"""World size. This is the total number of GPUs across all nodes.
-        Default: ``1``."""
+        r"""Specified the world size. This is the total number of GPUs across
+        all nodes. Default: ``1``."""
 
-        n_nodes = self.n_nodes if self.device == Device.SLURM else 1 
-        n_gpus = min(self.n_gpus, torch.cuda.device_count()) if self.device == Device.GPU else self.n_gpus
+        n_nodes = self.n_nodes if self.device == Device.SLURM else 1
+        n_gpus = (
+            min(self.n_gpus, device_count())
+            if self.device == Device.GPU
+            else self.n_gpus
+        )
 
         return n_nodes * n_gpus
 
     @property
     def requires_ipc(self):
-        r"""Needs communication. This property determines whether or not the
-        setup requires IPC. IPC is not required for a single device."""
+        r"""Specified whether the processes need inter-communication. This
+        property determines whether or not the setup requires IPC. IPC is not
+        required for a single device."""
 
-        if self.device in [Device.CPU, Device.MPS]: return False
+        if self.device in [Device.CPU, Device.MPS]:
+            return False
 
-        if self.ipc_groups is None: return False
+        if self.ipc_groups is None:
+            return False
 
         if self.device == Device.GPU:
-            return torch.cuda.device_count() > 1 and self.world_size > 1
+            return device_count() > 1 and self.world_size > 1
 
         return self.world_size > 1
 
     def print(self):
         r"""
-        This method serialised this object in a human readable format and
+        This method serialises this object in a human readable format and
         prints it.
         """
 
@@ -190,10 +219,10 @@ class Platform:
 
         \r • Name:\t\t\t\t{self.name}
         \r • Device:\t\t\t\t{self.device.value.upper()}
-        \r • CPUs:\t\t\t{self.n_cpus}
-        \r • Total RAM:\t\t\t{self.ram}GB
+        \r • CPUs:\t\t\t\t{self.n_cpus}
+        \r • Total RAM:\t\t\t\t{self.ram}GB
         \r • GPUs (per node):\t\t\t{self.n_gpus} (requested)
-        \r • GPUs (per node):\t\t\t{torch.cuda.device_count()} (available)
+        \r • GPUs (per node):\t\t\t{device_count()} (available)
         \r • PyTorch backend:\t\t\t{self.backend}
         \r • Seed (random number generators):\t{self.seed}
         """
@@ -217,4 +246,3 @@ class Platform:
         """
 
         IO.print(details)
-

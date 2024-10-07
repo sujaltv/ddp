@@ -1,0 +1,77 @@
+@font-face {
+  font-family: 'SF Pro Display';
+  src: url('./fonts/sf-pro-display/sf-pro-display-regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'SF Pro Display';
+  src: url('./fonts/sf-pro-display/sf-pro-display-regular-italic.otf') format('opentype');
+  font-weight: 400;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'SF Pro Display';
+  src: url('./fonts/sf-pro-display/sf-pro-display-medium.otf') format('opentype');
+  font-weight: 500;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'SF Pro Display';
+  src: url('./fonts/sf-pro-display/sf-pro-display-medium-italic.otf') format('opentype');
+  font-weight: 500;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'SF Pro Display';
+  src: url('./fonts/sf-pro-display/sf-pro-display-bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'SF Pro Display';
+  src: url('./fonts/sf-pro-display/sf-pro-display-bold-italic.otf') format('opentype');
+  font-weight: 700;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'SF Mono';
+  src: url('./fonts/sf-mono/sf-mono-regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'SF Mono';
+  src: url('./fonts/sf-mono/sf-mono-regular-italic.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'SF Mono';
+  src: url('./fonts/sf-mono/sf-mono-bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'SF Mono';
+  src: url('./fonts/sf-mono/sf-mono-bold-italic.ttf') format('truetype');
+  font-weight: 700;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'VC Honey SemiBold Deck';
+  src: url('./fonts/vc-honey/vc-honey-semibold-deck.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+}
+

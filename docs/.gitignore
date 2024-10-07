@@ -4,4 +4,5 @@
 build
 projects
 
+upload.sh
 **/_build

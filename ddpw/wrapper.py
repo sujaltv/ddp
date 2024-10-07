@@ -1,18 +1,31 @@
 from datetime import timedelta
-import os
+from os import environ
+from os.path import abspath, expanduser, isabs
 from typing import Any, Callable, Optional, Tuple
 
-import torch.distributed as dist
-import torch.multiprocessing as mp
+from torch.distributed import (
+    GroupMember,
+    ProcessGroup,
+    barrier,
+    destroy_process_group,
+    init_process_group,
+    new_group,
+)
+from torch.multiprocessing import Process, set_start_method
 
-from .platform import Device, Platform
-from .io import IO
 from . import functional as DF
+from .io import IO
+from .platform import Device, Platform
 
 
-def setup(node: int, global_rank: int, local_rank: int, platform: Platform,
-          target: Callable[[int, int, dist.ProcessGroup, Optional[Tuple]], Any],
-          args: Optional[Tuple]) :
+def setup(
+    node: int,
+    global_rank: int,
+    local_rank: int,
+    platform: Platform,
+    target: Callable[[int, int, ProcessGroup, Optional[Tuple]], Any],
+    args: Optional[Tuple],
+):
     r"""
     This function is called at the beginning of the process in each device
     (CPU/GPU). Depending on the needs, this function establishes DDP
@@ -27,55 +40,77 @@ def setup(node: int, global_rank: int, local_rank: int, platform: Platform,
     :param Optional[Tuple] args: Arguments to be passed to ``target``.
     """
 
-    node_info = f'Node {node}, GPU {global_rank}(G)/{local_rank}(L)'
+    node_info = f"Node {node}, GPU {global_rank}(G)/{local_rank}(L)"
 
-    IO.print(f'[{node_info}] Initialising the process.')
+    IO.print(f"[{node_info}] Initialising the process.")
 
     if platform.requires_ipc:
-        os.environ['MASTER_ADDR'] = platform.master_addr
-        port = os.environ['MASTER_PORT'] = str(platform.master_port)
+        environ["MASTER_ADDR"] = platform.master_addr
+        port = environ["MASTER_PORT"] = str(platform.master_port)
 
-        im = f'{platform.ipc_protocol}://{os.environ["MASTER_ADDR"]}'
-        if port is not None: im = f'{im}:{os.environ["MASTER_PORT"]}'
+        im = f'{platform.ipc_protocol}://{environ["MASTER_ADDR"]}'
+        if port is not None:
+            im = f'{im}:{environ["MASTER_PORT"]}'
 
-        IO.print(f'[{node_info}] IPC at {im}.')
+        IO.print(f"[{node_info}] IPC at {im}.")
 
         # do not specify the rank if process groups are to be used
-        dist.init_process_group(backend=platform.backend, init_method=im,
-                            rank=global_rank, world_size=platform.world_size)
+        init_process_group(
+            backend=platform.backend,
+            init_method=im,
+            rank=global_rank,
+            world_size=platform.world_size,
+        )
 
     # 1. Seed random number generators
-    IO.print(f'[{node_info}] ' +
-                f'Seeding random number generators with {platform.seed}.')
+    IO.print(
+        f"[{node_info}] " + f"Seeding random number generators with {platform.seed}."
+    )
     DF.seed_generators(platform.seed)
 
     # organise groups
-    grp = dist.GroupMember.WORLD
+    grp = GroupMember.WORLD
     if platform.requires_ipc and len(platform.ipc_groups) > 0:
         device_group = grp
         for device_group in platform.ipc_groups:
-            if global_rank in device_group: break
-        grp = dist.new_group(ranks=device_group, timeout=timedelta(seconds=30),
-                           backend=platform.backend)
+            if global_rank in device_group:
+                break
+        grp = new_group(
+            ranks=device_group, timeout=timedelta(seconds=30), backend=platform.backend
+        )
 
     # 2. Wait for all the processes in this group to synchronise and then start
     # the task
-    if platform.requires_ipc: dist.barrier(grp)
+    if platform.requires_ipc:
+        barrier(grp)
 
     # 3. Invoke the given task
-    IO.print(f'[{node_info}] All setup finished.')
+    IO.print(f"[{node_info}] All setup finished.")
     target(global_rank, local_rank, grp, args)
 
     # 4. Cleanup
-    if platform.requires_ipc: dist.destroy_process_group(grp)
-    IO.print(f'[{node_info}] Tasks on device complete.')
- 
+    if platform.requires_ipc:
+        destroy_process_group(grp)
+    IO.print(f"[{node_info}] Tasks on device complete.")
+
 
 class Wrapper:
     r"""
-    This class bootstraps the device setup for CPU, GPU, MPS, or a SLURM-based
-    cluster of GPU nodes. Once platform-specific configurations are set up, the
-    given task will be started.
+    This class is the highest level of abstraction: it accepts the
+    platform-related configurations and initialises the setup accordingly. When
+    given a task, it then runs the task according to the specified
+    configurations.
+
+    .. admonition:: Example
+        :class: tip
+
+        .. code:: python
+
+            from ddpw import Platform, Wrapper
+
+            wrapper = Wrapper(Platform(...))
+
+            wrapper.start(some_callable)
 
     :param Platform platform: Platform-related configurations.
     """
@@ -83,46 +118,48 @@ class Wrapper:
     def __init__(self, platform: Platform):
         IO.verbose = platform.verbose
 
-        IO.print('Initialising the DDP Wrapper.')
+        IO.print("Initialising the DDP Wrapper.")
         self.platform = platform
 
         if platform.requires_ipc:
             try:
-                mp.set_start_method(platform.spawn_method)
+                set_start_method(platform.spawn_method)
             except RuntimeError as e:
-                IO.print(
-                  f'Warning: {e}. Skipping setting the start method for forks.')
+                IO.print(f"Warning: {e}. Skipping setting the start method for forks.")
 
-    def __gpu(self, target: Callable[[int, int, dist.ProcessGroup,
-                              Optional[Tuple]], Any], args: Optional[Tuple]):
+    def __gpu(
+        self,
+        target: Callable[[int, int, ProcessGroup, Optional[Tuple]], Any],
+        args: Optional[Tuple],
+    ):
         r"""
         This method spins up a process for each GPU in the world. It assigns the
         task to be run on each process, `viz.`, distributing the datasets and
         models and commencing the task.
-        
+
         :param Callable target: The function to call on each GPU upon setup.
         :param Optional[Tuple] args: Arguments to be passed to ``target``.
         """
 
         if self.platform.world_size == 1:
-            node_info = f'Node 0, GPU 0(G)/0(L)'
-            IO.print(f'[{node_info}] Task starting on GPU.')
+            node_info = f"Node 0, GPU 0(G)/0(L)"
+            IO.print(f"[{node_info}] Task starting on GPU.")
             setup(0, 0, 0, self.platform, target, args)
             return
 
-        IO.print(f'Spawning {self.platform.world_size} processes.')
+        IO.print(f"Spawning {self.platform.world_size} processes.")
         processes = []
 
         # create a process for each GPU in the world
         for rank in range(self.platform.world_size):
-            p = mp.Process(target=setup, args=(0, rank, rank, self.platform,
-                                               target, args))
+            p = Process(target=setup, args=(0, rank, rank, self.platform, target, args))
             processes.append(p)
             p.start()
 
-        for p in processes: p.join()
+        for p in processes:
+            p.join()
 
-        IO.print('All processes complete.')
+        IO.print("All processes complete.")
 
     def __slurm(self, target: Callable, console_logs: str):
         r"""
@@ -134,7 +171,7 @@ class Wrapper:
         """
         from submitit import AutoExecutor
 
-        IO.print('Setting up the SLURM platform.')
+        IO.print("Setting up the SLURM platform.")
 
         executor = AutoExecutor(folder=console_logs)
         executor.update_parameters(
@@ -145,20 +182,24 @@ class Wrapper:
             cpus_per_task=self.platform.n_cpus,
             nodes=self.platform.n_nodes,
             timeout_min=self.platform.timeout_min,
-            slurm_partition=self.platform.partition
+            slurm_partition=self.platform.partition,
         )
 
         if self.platform.slurm_additional_parameters is not None:
-            executor.update_parameters(slurm_additional_parameters=
-                                   self.platform.slurm_additional_parameters)
+            executor.update_parameters(
+                slurm_additional_parameters=self.platform.slurm_additional_parameters
+            )
 
         return executor.submit(target)
 
-    def start(self, target: Callable[[int, int, dist.ProcessGroup,
-              Optional[Tuple]], Any], args: Optional[Tuple] = None):
+    def start(
+        self,
+        target: Callable[[int, int, ProcessGroup, Optional[Tuple]], Any],
+        args: Optional[Tuple] = None,
+    ):
         r"""
-        This method performs the necessary setup for the CPU/GPU/SLURM task and
-        then invokes the task.
+        This method performs the necessary setup according to the specified
+        configurations and then invokes the given task.
 
         :param Callable[[int, int, dist.ProcessGroup, Optional[Tuple]], Any] target:
             The task. A
@@ -171,11 +212,12 @@ class Wrapper:
 
         self.platform.print()
 
-        IO.print('Starting process(es).')
+        IO.print("Starting process(es).")
 
         def finished():
-            if self.platform.upon_finish is not None and \
-                callable(self.platform.upon_finish):
+            if self.platform.upon_finish is not None and callable(
+                self.platform.upon_finish
+            ):
                 return self.platform.upon_finish()
 
         match self.platform.device:
@@ -186,6 +228,7 @@ class Wrapper:
                 self.__gpu(target, args)
                 finished()
             case Device.SLURM:
+
                 def individual_gpu():
                     r"""
                     This nested function is the starting point for each
@@ -193,7 +236,7 @@ class Wrapper:
                     """
                     from submitit import JobEnvironment
 
-                    self.platform.master_addr = os.environ['HOSTNAME']
+                    self.platform.master_addr = environ["HOSTNAME"]
                     job_env = JobEnvironment()
 
                     details = f"""
@@ -203,16 +246,23 @@ class Wrapper:
                     """
                     IO.print(details)
 
-                    setup(job_env.node, job_env.global_rank, job_env.local_rank,
-                          self.platform, target, args)
+                    setup(
+                        job_env.node,
+                        job_env.global_rank,
+                        job_env.local_rank,
+                        self.platform,
+                        target,
+                        args,
+                    )
 
-                    if job_env.global_rank == 0: finished()
+                    if job_env.global_rank == 0:
+                        finished()
 
                 job = self.__slurm(individual_gpu, self.platform.console_logs)
 
                 p = self.platform.console_logs
-                if not os.path.isabs(p):
-                    p = os.path.abspath(os.path.expanduser(p))
+                if not isabs(p):
+                    p = abspath(expanduser(p))
                 details = f"""
                 \rSLURM job "{self.platform.name}" ({job.job_id}) scheduled.
                 \rSee respective device logs for output on those devices.
@@ -221,3 +271,33 @@ class Wrapper:
 
                 print(details)
 
+
+def wrapper(platform: Platform):
+    r"""
+    A decorator that can be applied to callables.
+
+    :param Platform platform: Platform details.
+
+    .. admonition:: Example
+        :class: tip
+
+        .. code:: python
+
+            from ddpw import Platform, wrapper
+
+            @wrapper(Platform(device='gpu', n_gpus=2, n_cpus=2))
+            def run(a, b):
+                # some task
+                pass
+    """
+
+    def __ddpw(fn):
+        def __wrapper(*args, **kwargs):
+            def __my_fn(global_rank, local_rank, _, __):
+                return fn(*args, **kwargs)
+
+            Wrapper(platform).start(__my_fn)
+
+        return __wrapper
+
+    return __ddpw

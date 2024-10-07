@@ -1,0 +1,221 @@
+{% extends 'furo/page.html' %}
+
+{% block body %}
+    {% include "partials/icons.html" %}
+
+    <input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+    <label class="overlay sidebar-overlay" for="__navigation">
+        <div class="visually-hidden">Hide navigation sidebar</div>
+    </label>
+
+    <input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+    <label class="overlay toc-overlay" for="__toc">
+        <div class="visually-hidden">Hide table of contents sidebar</div>
+    </label>
+
+    <div class="app">
+        <header class="header-style">
+            <div class="prima-facie header-contents">
+                <div>
+                    <a href="{{ pathto(master_doc) }}">
+                        <span class="sidebar-brand-text">
+                            {{ docstitle if docstitle else project }}
+                        </span>
+                    </a>
+                </div>
+
+                <div class="theme-toggle-container theme-toggle-header">
+                    <button class="theme-toggle">
+                        <div class="visually-hidden">?</div>
+                        <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+                        <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+                        <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+                        <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <div class="main-content-pane">
+            <aside class="sidebar-drawer">
+                <div class="sidebar-container">
+                    {% block left_sidebar %}
+                    <div class="sidebar-sticky">
+                        {%- for sidebar_section in sidebars %}
+                            {%- include sidebar_section %}
+                        {%- endfor %}
+                    </div>
+                    {% endblock left_sidebar %}
+                </div>
+            </aside>
+
+            <div class="prima-facie rugged">
+                <div class="main-content-nav-bar">
+                    <div class="header-left">
+                        <label class="nav-overlay-icon" for="__navigation">
+                        <div class="visually-hidden">Toggle site navigation sidebar</div>
+                            <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+                        </label>
+                    </div>
+
+                    <div class="header-right">
+                      <label class="toc-overlay-icon toc-header-icon{% if furo_hide_toc %} no-toc{% endif %}" for="__toc">
+                        <div class="visually-hidden">Toggle table of contents sidebar</div>
+                        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+                      </label>
+                    </div>
+                </div>
+
+                <div class="main-content">
+                    <a href="#" class="back-to-top muted-link">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+                      </svg>
+                      <span>{% trans %}Back to top{% endtrans %}</span>
+                    </a>
+
+                    <article role="main" id="furo-main-content">
+                      {% block content %}{{ body }}{% endblock %}
+                    </article>
+
+                    <div class="related-pages">
+                        {% if next -%}
+                            <a class="next-page" href="{{ next.link }}">
+                                <div class="page-info">
+                                    <div class="context">
+                                        <span>{{ _("Next") }}</span>
+                                    </div>
+                                    <div class="title">{{ next.title }}</div>
+                                </div>
+                                <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+                            </a>
+                        {%- endif %}
+                        {% if prev -%}
+                            <a class="prev-page" href="{{ prev.link }}">
+                                <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+                                <div class="page-info">
+                                    <div class="context">
+                                        <span>{{ _("Previous") }}</span>
+                                    </div>
+                                    {% if prev.link == pathto(master_doc) %}
+                                    <div class="title">{{ _("Home") }}</div>
+                                    {% else %}
+                                    <div class="title">{{ prev.title }}</div>
+                                    {% endif %}
+                                </div>
+                            </a>
+                        {%- endif %}
+                    </div>
+                </div>
+            </div>
+
+            <aside class="toc-drawer{% if furo_hide_toc %} no-toc{% endif %}">
+                {% block right_sidebar %}
+                {% if not furo_hide_toc %}
+                <div class="toc-sticky toc-scroll">
+                    <div class="toc-title-container">
+                        <span class="toc-title">
+                            {{ _("Page contents") }}
+                        </span>
+                    </div>
+                    <div class="toc-tree-container">
+                        <div class="toc-tree">
+                            {{ toc }}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                {% endblock right_sidebar %}
+            </aside>
+        </div>
+        
+        {% block footer %}
+            <footer class="footer-style">
+                <div class="prima-facie centre">
+                    <ul class="external-links simple-list">
+                        {#- Show GitHub repository home -#}
+                        {%- if ( READTHEDOCS or display_github ) and ( github_user != "None" and github_repo != "None" ) -%}
+                        <li>
+                            <a class="icon muted-link" href="https://github.com/{{ github_user }}/{{ github_repo }}" aria-label="On GitHub">
+                            <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 16 16">
+                              <path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"></path>
+                            </svg>
+                            </a>
+                        </li>
+                        {%- endif -%}
+                    </ul>
+
+                    {%- if show_copyright %}
+                        <div class="copyright">
+                          {%- if hasdoc('copyright') %}
+                            {% trans path=pathto('copyright'), copyright=copyright|e -%}
+                              <a href="{{ path }}">Copyright</a>
+                            {%- endtrans %}
+                          {%- else %}
+                            {% trans copyright=copyright|e -%}
+                              Copyright
+                            {%- endtrans %}
+                          {%- endif %}
+                          &#169;
+                          {% trans %}
+                              {{ copyright_duration }}
+                          {% endtrans -%}
+                          <a href="{{copyright_url}}" target="_blank">
+                              {{ copyright }}
+                          </a>
+                        </div>
+                    {%- endif %}
+
+                    <div>
+                        {% trans %}Documented with {% endtrans -%}
+                        {%- if show_sphinx -%}
+                            {% trans %}<a href="https://www.sphinx-doc.org/">Sphinx</a> and {% endtrans -%}
+                            <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+                        {% endif -%}
+                        {% trans %} <a href="https://github.com/pradyunsg/furo">Furo</a> {% endtrans %}
+                    </div>
+                </div>
+            </footer>
+        {% endblock footer %}
+    </div>
+
+    <script>
+        document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+
+        function setupSidebars() {
+            const nav = document.getElementById('__navigation');
+            const toc = document.getElementById('__toc');
+
+            const navTarget = document.querySelector('.sidebar-drawer');
+            const tocTarget = document.querySelector('.toc-drawer');
+
+            function toggleDisplay(checkbox, target) {
+                if (checkbox.checked) target.style.visibility = 'visible';
+                else target.style.visibility = 'hidden';
+            }
+
+            nav.addEventListener('change', (e) => { toggleDisplay(e.target, navTarget); });
+            toc.addEventListener('change', (e) => { toggleDisplay(e.target, tocTarget); });
+        }
+
+        function openSidebarSections() {
+            const chevrons = document.querySelectorAll('.toctree-l1.has-children');
+
+            chevrons.forEach((element) => {
+                const labels = element.querySelectorAll('label');
+
+                labels.forEach((label) => {
+                    if (!label.control.checked) label.click();
+                });
+            });
+        }
+
+        function setup() {
+            setupSidebars();
+            openSidebarSections();
+        }
+
+        document.addEventListener('DOMContentLoaded', setup);
+    </script>
+{% endblock body %}
+

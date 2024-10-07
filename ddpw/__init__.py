@@ -1,2 +1,2 @@
 from .platform import Device, Platform
-from .wrapper import Wrapper
+from .wrapper import Wrapper, wrapper
